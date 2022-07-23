@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Family Trivia</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
+
+    <style>
+        .flip-card {
+            width: 300px;
+            height: 300px;
+            perspective: 1000px;
+            transition: 0.3s;
+            z-index: 10;
+        }
+
+        .flip-card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        .flip-card:hover .flip-card-inner {
+            transform: rotateY(180deg);
+            box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        .flip-card-front,
+        .flip-card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+        }
+
+        .flip-card-back {
+            transform: rotateY(180deg);
+        }
+
+        text {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 11px;
+            pointer-events: none;
+        }
+
+        #goodChart {
+            position: absolute;
+            width: 550px;
+            height: 550px;
+            top: 50px;
+            left: 50px;
+        }
+
+        #badChart {
+            position: absolute;
+            width: 550px;
+            height: 550px;
+            top: 600px;
+            left: 50px;
+        }
+
+        #awardText {
+            position: absolute;
+            width: 300px;
+            height: 600px;
+            top: 10px;
+            left: 620px;
+            z-index: 1;
+        }
+
+        #awardText h1 {
+            font-size: 50px;
+            font-weight: bold;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            position: absolute;
+            padding: 0;
+            margin: 0;
+            top: 50%;
+            -webkit-transform: translate(0, -50%);
+            transform: translate(0, -50%);
+        }
+
+        #punishmentText {
+            position: absolute;
+            width: 300px;
+            height: 600px;
+            top: 560px;
+            left: 620px;
+        }
+
+        #punishmentText h1 {
+            font-size: 50px;
+            font-weight: bold;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            position: absolute;
+            padding: 0;
+            margin: 0;
+            top: 50%;
+            -webkit-transform: translate(0, -50%);
+            transform: translate(0, -50%);
+        }
+
+        #badTitle {
+            padding-top: 520px;
+        }
+
+        #questions {
+            position: absolute;
+            top: 20px;
+            left: 900px;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <div id="questions">
+            <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+                integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+                crossorigin="anonymous">
+
+            <div class="flip-card">
+                <div class="flip-card-inner">
+                    <div class="flip-card-front">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-flip-front">
+                                <div class="card-body">
+                                    <h5 class="card-title">Question</h5>
+                                    <p class="card-text" id="question">1 + 1 = ?</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flip-card-back">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-body">
+                                <h5 class="card-title">Answer</h5>
+                                <p class="card-text" id="answer">11</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button class="w-100 mt-2 btn btn-primary" onclick="drawQuestion()">Draw Question</button>
+        </div>
+
+        <h1>The Good</h1>
+        <div id="goodChart"></div>
+        <div id="awardText">
+            <h1></h1>
+        </div>
+
+        <h1 id="badTitle">The Bad</h1>
+        <div id="badChart"></div>
+        <div id="punishmentText">
+            <h1></h1>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-pprn3073KE6tl6bjs2QrFaJGz5/SUsLqktiwsUTF55Jfv3qYSDhgCecCxMW52nD2"
+        crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"
+        integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+
+    <script>
+        var padding = { top: 20, right: 40, bottom: 0, left: 0 },
+            width = 500 - padding.left - padding.right,
+            height = 500 - padding.top - padding.bottom,
+            radius = Math.floor(Math.min(width, height) / 2),
+            circumference = Math.floor(2 * radius * Math.PI),
+            color = d3.scale.category20();
+
+        var goodThings = [
+            { "label": "🤳", "value": 1, "text": "Steal" },
+            { "label": "🍬", "value": 2, "text": "Candy" },
+            { "label": "🍪", "value": 3, "text": "Cookie" },
+            { "label": "🎁", "value": 4, "text": "Pick One" },
+            { "label": "🚫", "value": 5, "text": "Lost Turn" },
+            { "label": "💰", "value": 6, "text": "25 Cents" },
+            { "label": "🎁🎁", "value": 7, "text": "Pick Two" }
+        ];
+
+        var badThings = [
+            { "label": "🎁", "value": 1, "text": "Give One" },
+            { "label": "👋", "value": 2, "text": "Lose One" },
+            { "label": "🚫", "value": 3, "text": "Lucked Out" },
+            { "label": "🎁🎁", "value": 4, "text": "Give Two" },
+            { "label": "👋👋", "value": 5, "text": "Lose Two" },
+            { "label": "🚫", "value": 3, "text": "Lucked Out" }
+        ];
+
+        var chartWidth = width + padding.left + padding.right;
+        var chartHeight = height + padding.top + padding.bottom;
+
+        function drawSpinner(containerName, items, textContainerName) {
+            var rotation = 0,
+                oldrotation = 0;
+
+            var svg = d3.select(containerName)
+                .append("svg")
+                .data([items])
+                .attr("height", chartHeight)
+                .attr("width", chartWidth);
+
+            var container = svg.append("g")
+                .attr("class", containerName + "Holder")
+                .attr("transform", "translate(" + (width / 2 + padding.left) + "," + (height / 2 + padding.top) + ")");
+
+            var vis = container
+                .append("g");
+
+            var pie = d3.layout.pie().sort(null).value(function (d) { return 1; });
+
+            var arc = d3.svg.arc().outerRadius(radius);
+
+            var arcs = vis.selectAll("g.slice")
+                .data(pie)
+                .enter()
+                .append("g")
+                .attr("class", "slice");
+
+            arcs.append("path")
+                .attr("fill", function (d, i) { return color(i); })
+                .attr("d", function (d) { return arc(d); });
+
+            arcs.append("text").attr("transform", function (d) {
+                d.innerRadius = 0;
+                d.outerRadius = radius;
+                d.angle = (d.startAngle + d.endAngle) / 2;
+                return "rotate(" + (d.angle * 180 / Math.PI - 90) + ")translate(" + (d.outerRadius - 10) + ")";
+            })
+                .attr("text-anchor", "end")
+                .text(function (d, i) {
+                    return items[i].label;
+                });
+
+            container.on("click", spin);
+
+            function spin(d) {
+                d3.select(textContainerName + " h1").text('');
+                container.on("click", null);
+                var degreesPerSlice = 360 / items.length,
+                    rng = Math.floor((Math.random() * circumference) + 360);
+
+                rotation = (Math.round(rng / degreesPerSlice) * degreesPerSlice);
+
+                var picked = Math.round(items.length - (rotation % 360) / degreesPerSlice);
+                picked = picked >= items.length ? (picked % items.length) : picked;
+
+                rotation += 90 - Math.round(degreesPerSlice / 2);
+                vis.transition()
+                    .duration(3000)
+                    .attrTween("transform", rotTween)
+                    .each("end", function () {
+                        d3.select(textContainerName + " h1")
+                            .text(items[picked].text);
+                        oldrotation = rotation;
+
+                        container.on("click", spin);
+                    });
+            }
+
+            svg.append("g")
+                .attr("transform", "translate(" + (width + padding.left + padding.right) + "," + ((height / 2) + padding.top) + ")")
+                .append("path")
+                .attr("d", "M-" + (radius * .15) + ",0L0," + (radius * .05) + "L0,-" + (radius * .05) + "Z")
+                .style({ "fill": "black" });
+
+            container.append("circle")
+                .attr("cx", 0)
+                .attr("cy", 0)
+                .attr("r", 60)
+                .style({ "fill": "white", "cursor": "pointer" });
+
+            container.append("text")
+                .attr("x", 0)
+                .attr("y", 15)
+                .attr("text-anchor", "middle")
+                .text("SPIN")
+                .style({ "font-weight": "bold", "font-size": "30px" });
+
+            function rotTween(to) {
+                var i = d3.interpolate(oldrotation % 360, rotation);
+                return function (t) {
+                    return "rotate(" + i(t) + ")";
+                };
+            }
+        }
+
+        function getRandomNumbers() {
+            var array = new Uint16Array(1000);
+            var scale = d3.scale.linear().range([360, circumference]).domain([0, 100000]);
+            if (window.hasOwnProperty("crypto") && typeof window.crypto.getRandomValues === "function") {
+                window.crypto.getRandomValues(array);
+            }
+            else {
+                for (var i = 0; i < 1000; i++) {
+                    array[i] = Math.floor(Math.random() * 100000) + 1;
+                }
+            }
+
+            return array;
+        }
+
+        drawSpinner('#goodChart', goodThings, '#awardText');
+        drawSpinner('#badChart', badThings, '#punishmentText');
+
+        function drawQuestion() {
+            var drawnQuestion = questions[Math.floor(Math.random() * questions.length)];
+            $("#question").text(drawnQuestion.question);
+            $("#answer").text(drawnQuestion.answer);
+        }
+
+        var questions = [
+            { "question": "Which is the largest species of cat in the world? (a) Tigers (b) Lions (c) Panthers.", "answer": "(a) Tigers." },
+            { "question": "What does it mean if an animal is “endangered”?", "answer": "They are close to extinction." },
+            { "question": "What is a baby cow called? (a) A puppy (b) A foal (c) A calf.", "answer": "(c) Calf." },
+            { "question": "What color are ladybugs?", "answer": "Red and black." },
+            { "question": "How many legs do insects have?", "answer": "Six." },
+            { "question": "What is the fastest land animal in the world? Is it (a) An antelope (b) A cheetah (c) A hippo.", "answer": "(b) Cheetah. " },
+            { "question": "What is the national mammal of the United States?", "answer": "The American Bison." },
+            { "question": "What is the largest land animal in the world?", "answer": "African Elephants." },
+            { "question": "What color are polar bears?", "answer": "White." },
+            { "question": "What makes dalmatian dogs so unique?", "answer": "Their spots." },
+            { "question": "What is the national bird of the United States?", "answer": "The Bald eagle." },
+            { "question": "Which bird lays the biggest eggs?", "answer": "The ostrich." },
+            { "question": "What type of bird eats animals that are already dead?", "answer": "Vultures." },
+            { "question": "All birds are related to dinosaurs. True or false?", "answer": "True." },
+            { "question": "Which bird has the largest wingspan? (a) The wandering albatross (b) The bald eagle (c) The great white pelican.", "answer": "(a) The wandering albatross." },
+            { "question": "What species of bird were Skipper, Rico, Private, and Kowalski in the movie Madagascar?", "answer": "Penguins." },
+            { "question": "Which bird goes “hoot” in the night?", "answer": "Owls." },
+            { "question": "Which pink-colored bird is famous for standing on one leg?", "answer": " Flamingos." },
+            { "question": "On Thanksgiving, it’s traditional to eat roast duck. True or false?", "answer": "False." },
+            { "question": "What do you call the soft and sometimes colorful things that cover a bird’s body?", "answer": "Feathers." },
+            { "question": "Which country was the first to land on the moon?", "answer": "The United States." },
+            { "question": "How many planets are there in our solar system?", "answer": "Eight." },
+            { "question": "What do you call the bright lights in the sky at night?", "answer": "Stars." },
+            { "question": "In space, there’s no gravity. What effect does this have on astronauts?", "answer": "They float." },
+            { "question": "Which planet is surrounded by a set of rings? (a) Mars (b) Saturn (c) Jupiter.", "answer": "(b) Saturn." },
+            { "question": "What does the Earth orbit around?", "answer": "The sun." },
+            { "question": "What orbits around the Earth?", "answer": "The moon." },
+            { "question": "Which planet is also known as “the red planet”?", "answer": "Mars." },
+            { "question": "What is the name of the galaxy to which our solar system belongs?", "answer": "The Milky Way." },
+            { "question": "What piece of equipment would you use to look at planets close up?", "answer": "A telescope." },
+            { "question": "What’s the name of the villain in the Lion King?", "answer": "Scar." },
+            { "question": "How many movies are there in the Toy Story franchise?", "answer": "Four." },
+            { "question": "Which animal does the Grinch have as a pet?(a) A dog (b) A cat (c) A parrot.", "answer": "(a) A Dog." },
+            { "question": "What’s the name of the snowman in Frozen?", "answer": "Olaf." },
+            { "question": "Scooby-Doo’s real name is Scoobert Doobert. True or false?", "answer": "False (it’s Scoobert Doo.)" },
+            { "question": "Which Mexican holiday is Coco based on?", "answer": "Day of the Dead." },
+            { "question": "In Ratatouille, what secret talent does Remy the rat have?", "answer": "He’s a chef." },
+            { "question": "Madagascar is based on the lives of a group of (a) Farm animals (b) Zoo animals (c) Wild animals.", "answer": "Zoo animals." },
+            { "question": "What is the name of Shrek’s four-legged sidekick?", "answer": "Donkey." },
+            { "question": "Complete the title of this classic Disney tale: Snow White and the Seven _____.", "answer": "Dwarves." },
+            { "question": "What are the two main toppings on a Hawaiian pizza?", "answer": "Ham and pineapple." },
+            { "question": "Which country does spaghetti come from?", "answer": "Italy." },
+            { "question": "What do vegetarians not eat?", "answer": "Meat." },
+            { "question": "What do vegans not eat?", "answer": "Meat and dairy products." },
+            { "question": "U.S. baseball fans eat over 25 million hot dogs every season. True or false?", "answer": "True." },
+            { "question": "Brisket, sirloin, T-bone, and tomahawk are all cuts of what meat? (a) Chicken (b) Pork (c) Beef.", "answer": "(c) Beef." },
+            { "question": "Which country do burritos, guacamole, and tacos come from?", "answer": "Mexico." },
+            { "question": "What are the three main ingredients in s’mores?", "answer": "Marshmallows, graham crackers, and chocolate." },
+            { "question": "Which vitamin do oranges contain?", "answer": "Vitamin C." },
+            { "question": "What types of food are Monterey Jack, mozzarella, Gouda, and Swiss?", "answer": "Cheese." },
+            { "question": "What do you call a large, cone-shaped rock formation that spews out lava?", "answer": "A volcano." },
+            { "question": "What do you call water that has frozen due to cold temperatures?", "answer": "Ice." },
+            { "question": "The largest tree in the world is General Sherman, and it can be found in California, USA. Do you know what kind of tree it is?", "answer": "A giant sequoia." },
+            { "question": "What do you call a dangerous storm that starts at sea?", "answer": "A hurricane." },
+            { "question": "What’s the name for the fluffy white shapes you can see in the sky?", "answer": "Clouds." },
+            { "question": "What’s the highest mountain in the world?", "answer": "Mount Everest in Nepal." },
+            { "question": "What is the longest river in the USA?", "answer": "The Mississippi." },
+            { "question": "The highest temperature ever recorded in the United States is 134 degrees. True or false?", "answer": "True." },
+            { "question": "What do you call the ball-shaped pieces of ice that sometimes fall from the sky?", "answer": "Hail or hailstones." },
+            { "question": "Where is the coldest place in the United States? Is it (a) Fairbanks, AK (b) Saint Paul, MN or (c) Cheyenne, WY?", "answer": "Fairbanks, AK." },
+            { "question": "What is the capital of the United States?", "answer": "Washington D.C." },
+            { "question": "Which two countries border the United States?", "answer": "Canada and Mexico." },
+            { "question": "The largest city in the U.S. is Los Angeles. True or false?", "answer": "False, it’s New York." },
+            { "question": "What is Las Vegas famous for?", "answer": "Casinos." },
+            { "question": "Which U.S. city is known as “the windy city”?", "answer": "Chicago." },
+            { "question": "Which U.S. state is known as the Sunflower State?", "answer": "Kansas." },
+            { "question": "How many states are there in the U.S.?", "answer": "50." },
+            { "question": "Of these three U.S. states, which is the largest: (a) New York (b) Alaska (c) Texas?", "answer": "Alaska." },
+            { "question": "Which is the smallest U.S. state?", "answer": "Rhode Island." },
+            { "question": "In which state would you find the Grand Canyon?", "answer": "Arizona." },
+            { "question": "How many seasons are there in a year?", "answer": "Four." },
+            { "question": "What date is Christmas?", "answer": "December 25." },
+            { "question": "In which month does fall begin?", "answer": "September." },
+            { "question": "Name three things you do on Halloween. Possible answers: Trick or treating, wear a costume, decorate your home, eat candy." },
+            { "question": "Which religion celebrates Hanukkah?", "answer": "Judaism." },
+            { "question": "Easter happens in the summer. True or false?", "answer": "False, Easter happens in spring." },
+            { "question": "What happens to trees in fall?", "answer": "Their leaves change color and fall to the ground." },
+            { "question": "During which season is it most likely to snow?", "answer": "Winter." },
+            { "question": "What is the name of the reindeer with the red nose?", "answer": "Rudolph." },
+            { "question": "In which season do people celebrate Thanksgiving?", "answer": "Fall." },
+            { "question": "In which sport might you hear these words: bogey, eagle, and birdie?", "answer": "Golf." },
+            { "question": "How many strikes are batters allowed in baseball?", "answer": "Three." },
+            { "question": "What do you call the player who directs their team’s play and calls all the shots in football?", "answer": "Quarterback." },
+            { "question": "How many players are there on a soccer team?", "answer": "11." },
+            { "question": "Who invented Lacrosse? (a) Native Americans (b) French settlers (c) Civil War soldiers.", "answer": "Native Americans." },
+            { "question": "Which sport can you play on both grass and ice - and while wearing rollerblades?", "answer": "Hockey." },
+            { "question": "Name three events you might find during your school’s field day. Possible answers: Ring toss, relay race, obstacle course, and sidewalk chalk." },
+            { "question": "A touchdown is scored in football when the ball is kicked through the goalposts. True or false?", "answer": "False." },
+            { "question": "Which of the following is a real swimming stroke? (a) the caterpillar (b) the butterfly (c) the worm.", "answer": "The butterfly." },
+            { "question": "What color are tennis balls?", "answer": "Green." },
+            { "question": "What year was the Declaration of Independence signed?", "answer": "1776." },
+            { "question": "Who was the first President of the United States?", "answer": "George Washington." },
+            { "question": "Who is the current President of the United States?", "answer": "Joe Biden." },
+            { "question": "How many stars are there on the American flag?", "answer": "50." },
+            { "question": "What is the name of the U.S. national anthem?", "answer": "The Star-Spangled Banner." },
+            { "question": "The United States has never had a female president. True or false?", "answer": "True." },
+            { "question": "How old do you have to be to vote?", "answer": "18." },
+            { "question": "The United States flag contains three colors. What are they?", "answer": "Red, white, and blue." },
+            { "question": "What are the two main political parties in America?", "answer": "Republicans and Democrats." },
+            { "question": "Where does the President of the United States live?", "answer": "The White House." },
+            { "question": "Which country are the Harry Potter stories set in?", "answer": "England." },
+            { "question": "Where does sushi come from?", "answer": "Japan." },
+            { "question": "In which country would you find a giant panda in the wild?", "answer": "China." },
+            { "question": "France, Italy, Germany, Spain, and Portugal are all part of which continent?", "answer": "Europe." },
+            { "question": "Where does The Day of the Dead originally come from?", "answer": "Mexico." },
+            { "question": "Which country eats the most chocolate? Is it (a) Switzerland (b) Canada or (c) Brazil?", "answer": "Switzerland." },
+            { "question": "On which continent are you most likely to see zebras, lions, giraffes, cheetahs, and elephants in the wild?", "answer": "Africa." },
+            { "question": "Where is Greta Thunberg from?", "answer": "Sweden." },
+            { "question": "Scotland’s national animal is the unicorn. True or false?", "answer": "True." },
+            { "question": "Which English city does Paddington Bear travel to?", "answer": "London." },
+            { "question": "Whose nose grew longer every time he lied?", "answer": "Pinocchio" },
+            { "question": "What is the name of the fairy in Peter Pan?", "answer": "Tinkerbell" },
+            { "question": "If you freeze water, what do you get?", "answer": "Ice" },
+            { "question": "What colors are the stars on the American flag?", "answer": "White" },
+            { "question": "In the nursery rhyme, Jack and Jill, what do Jack and Jill go up the hill to fetch?", "answer": "A pail of water." },
+            { "question": "How many legs does a spider have?", "answer": "Eight" },
+            { "question": "What is the name of the toy cowboy in Toy Story?", "answer": "Woody" },
+            { "question": "What is the color of an emerald?", "answer": "Green" },
+            { "question": "What is something you hit with a hammer?", "answer": "A nail." },
+            { "question": "What’s the name of a place you go to see lots of animals?", "answer": "The zoo." },
+            { "question": "Where does the President of the United States live while in office?", "answer": "The White House" },
+            { "question": "How many planets are in our solar system?", "answer": "Eight" },
+            { "question": "Which ocean is off the California coast?", "answer": "The Pacific" },
+            { "question": "What fruit do kids traditionally give to teachers?", "answer": "An apple." },
+            { "question": "What’s the response to ‘See you later, alligator?'", "answer": "In a while, crocodile." },
+            { "question": "What type of fish is Nemo?", "answer": "A clownfish." },
+            { "question": "What do caterpillars turn into?", "answer": "Butterflies" },
+            { "question": "What is the color of a school bus?", "answer": "Yellow" },
+            { "question": "What do you use to write on a blackboard?", "answer": "Chalk" },
+            { "question": "On which holiday do you go trick-or-treating?", "answer": "Halloween" },
+            { "question": "Which Disney movie is Elsa in?", "answer": "Frozen" },
+            { "question": "Who is Mickey Mouse’s girlfriend?", "answer": "Minnie Mouse" },
+            { "question": "Where does Santa Claus live?", "answer": "The North Pole" },
+            { "question": "According to the Dr. Seuss book, who stole Christmas?", "answer": "The Grinch" },
+            { "question": "Which state is famous for Hollywood?", "answer": "California" },
+            { "question": "How many pairs of wings do bees have?", "answer": "Two" },
+            { "question": "Where is the Great Pyramid of Giza?", "answer": "Egypt" },
+            { "question": "What is a doe?", "answer": "A female deer." },
+            { "question": "What do bees make?", "answer": "Honey" },
+            { "question": "When do leaves die?", "answer": "In the fall." },
+            { "question": "Which is the fastest land animal?", "answer": "The cheetah." },
+            { "question": "What kind of animal was Abu in Aladdin?", "answer": "A monkey." },
+            { "question": "Who wrote Hamlet?", "answer": "William Shakespeare" },
+            { "question": "Who built the pyramids?", "answer": "The Egyptians." },
+            { "question": "In the nursery rhyme, who sat on a wall before having a great fall?", "answer": "Humpty Dumpty" },
+            { "question": "What kind of cat is considered bad luck?", "answer": "Black cats." },
+            { "question": "How many days are in a year?", "answer": "365" },
+            { "question": "What is the name of the pirate in Peter Pan?", "answer": "Captain Hook" },
+            { "question": "What is a brontosaurus?", "answer": "A dinosaur." },
+            { "question": "What is a group of lions called?", "answer": "A pride." },
+            { "question": "On the farm, what is a kid?", "answer": "A baby goat." },
+            { "question": "What is the name of Harry Potter’s pet owl?", "answer": "Hedwig" },
+            { "question": "Which superhero can climb up walls and buildings?", "answer": "Spiderman" },
+            { "question": "Stars and Stripes’ is the nickname of the flag of which country?", "answer": "The United States of America" },
+            { "question": "Which planet in our Solar System is known for having a ring?", "answer": "Saturn" },
+            { "question": "Why do things fall when you drop them?", "answer": "Because of gravity." },
+            { "question": "What color are Smurfs?", "answer": "Blue" },
+            { "question": "Name Batman’s crime-fighting partner?", "answer": "Robin" },
+            { "question": "How many sides does a triangle have?", "answer": "Three" },
+            { "question": "Who was the first American president?", "answer": "George Washington" },
+            { "question": "Which country is home to the kangaroo?", "answer": "Australia" },
+            { "question": "What is the opposite of ‘cheap’?", "answer": "Expensive" },
+            { "question": "Which animal is the tallest in the world?", "answer": "Giraffe" },
+            { "question": "Which singing voice is the highest pitch? Soprano, tenor, or baritone?", "answer": "Soprano" },
+            { "question": "What is the largest mammal in the world?", "answer": "A whale." },
+            { "question": "How many colors are in a rainbow?", "answer": "Seven" },
+            { "question": "Who is the patron saint of Ireland?", "answer": "St. Patrick" },
+            { "question": "In which capital city of Europe would you find the Eiffel Tower?", "answer": "Paris" },
+            { "question": "What do you have to stick on an envelope?", "answer": "A stamp." },
+            { "question": "A scientist who studies rocks is called a what?", "answer": "A geologist." },
+            { "question": "Who was the first man to step on the moon?", "answer": "Neil Armstrong" },
+            { "question": "What could make Harry Potter invisible?", "answer": "The Invisibility Cloak" },
+            { "question": "In sports, what is an MVP?", "answer": "Most Valuable Player" },
+            { "question": "If you suffer from arachnophobia, which animal are you scared of?", "answer": "Spiders" },
+            { "question": "What is the smallest state in America?", "answer": "Rhode Island" },
+            { "question": "Two of the planets in our solar system begin with the letter M, can you name them?", "answer": "Mars and Mercury" },
+            { "question": "What kind of tree do acorns come from?", "answer": "Oak" },
+            { "question": "How many bones do sharks have?", "answer": "Zero" },
+            { "question": "What is the name of molten rock after a volcanic eruption?", "answer": "Lava" },
+            { "question": "What food do pandas eat?", "answer": "Bamboo" },
+            { "question": "Which place is called ‘the happiest place in the world?'", "answer": "Disney World" },
+            { "question": "What day of the year is Independence Day?", "answer": "July 4th." },
+            { "question": "How many continents are there in the world?", "answer": "Seven" },
+            { "question": "What is the largest state in America?", "answer": "Alaska" },
+            { "question": "What is the part of the human eye that controls the amount of light that passes through the pupil?", "answer": "The iris."},
+            { "question": "Can you name the closest star to Earth?", "answer": "The sun." },
+            { "question": "Can you name the seven dwarves in Snow White?", "answer": "Sleepy, Sneezy, Happy, Grumpy, Dopey, Doc, and Bashful" },
+            { "question": "In what country were the Olympic Games invented?", "answer": "Greece" },
+            { "question": "Who was the 16th president of the United States?", "answer": "Abraham Lincoln" },
+            { "question": "Which movie is Prince Charming from?", "answer": "Cinderella" },
+            { "question": "Which country did Justin Bieber come from?", "answer": "Canada" },
+            { "question": "What is the nickname for the bell of the clock at the Palace of Westminster in London?", "answer": "Big Ben" },
+            { "question": "What do you get when you boil water?", "answer": "Steam" },
+            { "question": "What is the name of Mickey Mouse’s pet dog?", "answer": "Pluto" },
+            { "question": "Who invented the telephone?", "answer": "Alexander Graham Bell" },
+            { "question": "The Statue Of Liberty came from which country to the United States?", "answer": "France" },
+            { "question": "Who painted the Mona Lisa?", "answer": "Leonardo DaVinci" },
+            { "question": "What’s the name of the town where The Flintstones live?", "answer": "Bedrock" },
+            { "question": "Which famous ocean liner sank on her first voyage in 1912?", "answer": "The Titanic" },
+            { "question": "In what movie will you find characters who are looking for a brain, a heart, and courage?", "answer": "The Wizard Of Oz" },
+            { "question": "What movie is Princess Fiona from?", "answer": "Shrek" },
+            { "question": "What is the imaginary line called that connects the north and south pole?", "answer": "Prime Meridian" },
+            { "question": "What kind of tree do prunes come from?", "answer": "A plum tree." },
+            { "question": "What gulf is located to the south of Florida?", "answer": "The Gulf of Mexico" },
+            { "question": "What is the hardest natural substance?", "answer": "A diamond." },
+            { "question": "Which state was the 50th state to join the union?", "answer": "Hawaii" },
+            { "question": "What is the largest continent?", "answer": "Asia" },
+            { "question": "What is the tallest mountain in the world?", "answer": "Mount Everest" },
+            { "question": "How many Great Lakes are there?", "answer": "Five" },
+            { "question": "What is the first letter of the Greek alphabet?", "answer": "Alpha" },
+            { "question": "How many milligrams make a gram?", "answer": "1000" },
+            { "question": "Which bird has the largest wingspan?", "answer": "Albatross" },
+            { "question": "From which language did the word Ketchup come from?", "answer": "Chinese" },
+            { "question": "In which city was the Titanic launched?", "answer": "Belfast" },
+            { "question": "What is the most widely spoken language in Brazil?", "answer": "Portuguese" },
+            { "question": "What does the white dove symbolize?", "answer": "Peace" },
+            { "question": "The color of grass?", "answer": "Green" },
+            { "question": "You wear this on your head?", "answer": "Hat" },
+            { "question": "The liquid inside a pen?", "answer": "Ink" },
+            { "question": "The seventh month of the year?", "answer": "July" },
+            { "question": "What do you do to a football?", "answer": "Kick" },
+            { "question": "A common garden insect?", "answer": "Ant" },
+            { "question": "A yellow fruit?", "answer": "Banana" },
+            { "question": "A building where movies are shown?", "answer": "Theatres" },
+            { "question": "Creatures that lived millions of years ago?", "answer": "Dinosaur" },
+            { "question": "Birds lay these?", "answer": "Eggs" },
+            { "question": "The opposite of dark?", "answer": "Light" },
+            { "question": "Something to wipe your feet on?", "answer": "Mat" },
+            { "question": "A sea creature with eight legs?", "answer": "Octopus" },
+            { "question": "A place that you may go to play?", "answer": "Park" },
+            { "question": "Another word meaning fast?", "answer": "Quick" },
+            { "question": "A picture that shows your bones?", "answer": "X-Ray" },
+            { "question": "Something you do when you feel tired?", "answer": "Yawn" },
+            { "question": "You might tie something up with this?", "answer": "Rope" },
+            { "question": "Something to keep you dry in the rain?", "answer": "Umbrella" },
+            { "question": "Something to put flowers in?", "answer": "Vase" },
+            { "question": "North, south, east, and?", "answer": "West" },
+            { "question": "Who was the youngest Beatle?", "answer": "George Harrison" },
+            { "question": "Who lives at number four, Privet Drive?", "answer": "Harry Potter" },
+            { "question": "In which city is the cathedral of Nôtre Dame?", "answer": "Paris" },
+            { "question": "What color is the middle stripe of the French flag?", "answer": "White" },
+            { "question": "Who wrote a famous diary while hiding from the Nazis in Amsterdam?", "answer": "Anne Frank" },
+            { "question": "Which Dutch painter cut off a part of his ear?", "answer": "Vincent van Gogh" },
+            { "question": "In which country is the Great Barrier Reef?", "answer": "Australia" },
+            { "question": "What color is chlorophyll?", "answer": "Green" },
+            { "question": "How many points are scored for a touchdown in American football?", "answer": "Six" },
+            { "question": "Which soft green egg-shaped fruit comes from New Zealand?", "answer": "The Kiwi fruit." },
+            { "question": "Who directed Jaws, Raiders of the Lost Ark, and ET?", "answer": "Steven Spielberg" },
+            { "question": "What is the family name of JFK?", "answer": "Kennedy" },
+            { "question": "How many players are there in a baseball team?", "answer": "Nine" },
+            { "question": "What is the national sport of Japan?", "answer": "Sumo Wrestling" },
+            { "question": "Who does Alice follow to a hole into Wonderland?", "answer": "The White Rabbit" },
+            { "question": "Who sang Yellow Submarine?", "answer": "The Beatles" },
+            { "question": "In which country was Buddha born?", "answer": "Nepal" },
+            { "question": "In which galaxy do we live?", "answer": "The Milky Way" },
+            { "question": "Who painted The Scream?", "answer": "Edvard Munch" },
+            { "question": "Which is the smallest breed of dog?", "answer": "The Chihuahua" },
+            { "question": "Which is the most common non-contagious disease in the world?", "answer": "Tooth Decay" },
+            { "question": "What is the rhino’s horn made of?", "answer": "Keratin" },
+            { "question": "What is the hardest substance in the human body?", "answer": "Tooth enamel." },
+            { "question": "Which metal is heavier – silver or gold?", "answer": "Gold" },
+            { "question": "How many legs do butterflies have?", "answer": "Six" },
+            { "question": "Which is the country with the most people?", "answer": "China" },
+            { "question": "What is Aurora Borealis commonly known as?", "answer": "Northern Lights" },
+            { "question": "How much salt does the average human body contain?", "answer": "Around 250 grams." },
+            { "question": "What type of animal is the largest primate in the world?", "answer": "The Gorilla" },
+            { "question": "What is the name of the phobia that involves an abnormal fear of spiders?", "answer": "Arachnophobia" },
+            { "question": "What is the longest type of cell in the body?", "answer": "The nerve cell (neuron)." },
+            { "question": "Which is the rarest blood type in humans?", "answer": "AB negative." },
+            { "question": "What is the Little Mermaid’s name?", "answer": "Ariel" },
+            { "question": "What is the name of the princess in Princess & The Frog?", "answer": "Tiana" },
+            { "question": "What is the name of the lead pirate in Pirates of the Caribbean?", "answer": "Captain Jack Sparrow" },
+            { "question": "What is the name of the red car in the movie Cars?", "answer": "Lightning McQueen" },
+            { "question": "What’s the name of the famous Big Red Dog?", "answer": "Clifford" },
+            { "question": "What is the name of the piggy bank in Toy Story?", "answer": "Hamm" },
+            { "question": "What is the name of the wooly mammoth in the Ice Age?", "answer": "Manfred (Manny)" },
+            { "question": "What is the Panda’s name in Kung Fu Panda?", "answer": "Po" },
+            { "question": "In the Disney Pixar movie Monsters Inc., who is the company’s best scarer?", "answer": "James ‘Sully’ Sullivan" },
+            { "question": "What zoo are the animals from in Madagascar?", "answer": "Central Park Zoo" },
+            { "question": "What are the Wright brothers famous for?", "answer": "Inventing the airplane." },
+            { "question": "What is the name of the first atomic bomb dropped on Hiroshima, Japan?", "answer": "Little Boy" },
+            { "question": "The Nobel peace prize is named after?", "answer": "Alfred Nobel" },
+            { "question": "Which scientist invented the lightbulb?", "answer": "Thomas Edison" },
+            { "question": "Which was the first country to use paper money?", "answer": "China" },
+            { "question": "Which famous person was the teddy bear named after?", "answer": "Theodore Roosevelt" },
+            { "question": "Which is the smallest ocean in the world?", "answer": "Arctic Ocean" },
+            { "question": "How many stripes are on the American Flag?", "answer": "13" },
+            { "question": "Who was the first US President to get impeached?", "answer": "Andrew Johnson" },
+            { "question": "Where is the leaning tower of Piza?", "answer": "Italy" },
+            { "question": "Is the sun a planet or star?", "answer": "Star" },
+            { "question": "A funnel-shaped cloud is called?", "answer": "A Tornado" },
+            { "question": "What is the 3rd planet from the sun?", "answer": "Earth" },
+            { "question": "What is the largest animal?", "answer": "Elephant" },
+            { "question": "How many inches in one foot?", "answer": "12 inches" },
+            { "question": "What do you call a baby cow?", "answer": "A calf." },
+            { "question": "What do you call a female horse?", "answer": "A mare." },
+            { "question": "What happens when strong winds and rain combine?", "answer": "Hurricane " },
+            { "question": "A female part of a plant is called?", "answer": "Pistil" },
+            { "question": "The number of rings in a tree trunk tells what about the tree?", "answer": "Age" },
+            { "question": "What about a flower are bees attracted to?", "answer": "Scent" },
+            { "question": "How much is half a dozen?", "answer": "6" },
+            { "question": "What is the first basic part of a plant?", "answer": "Root" },
+            { "question": "How many US states have active volcanoes?", "answer": "12" },
+            { "question": "What state is the Liberty Bell located in?", "answer": "Pennsylvania" },
+            { "question": "What is the longest river in the world?", "answer": "The Nile River" },
+            { "question": "What is the largest ocean on the earth?", "answer": "The Pacific Ocean" },
+            { "question": "How many quarts in a gallon?", "answer": "4" },
+            { "question": "How many dimes make a dollar?", "answer": "10" },
+            { "question": "How many quarters make five dollars?", "answer": "20" },
+            { "question": "How many sides does a square have?", "answer": "4" },
+            { "question": "How old was the youngest US president?", "answer": "43" }
+        ];
+    </script>
+
+</body>
+
+</html>

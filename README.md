@@ -1,6 +1,8 @@
 # FamilyTrivia
 
-##Sources:
+Link to game: https://idaneschilling.github.io/FamilyTrivia/
+
+## Sources:
 
 ### Questions from:
 * https://www.twinkl.com/blog/110-first-grade-trivia-questions
